@@ -34,15 +34,15 @@ $(function () {
             },
             
             credits: {
-			    enabled: false
-		    },
+                enabled: false
+            },
 
             title : {
                 text : null
             },
 
             scrollbar : {
-                enabled : false
+                enabled : true
             },
             
             series : [{
