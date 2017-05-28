@@ -13,3 +13,4 @@ Raspberry Pi のGPIO23をWi-SUNモジュールのWKUP端子へ接続してくだ
 
 
 元のソースはこちら：
+https://github.com/yawatajunk/Wi-SUN_EnergyMeter
