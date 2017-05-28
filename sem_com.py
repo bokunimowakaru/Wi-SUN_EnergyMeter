@@ -21,6 +21,7 @@ import user_conf
 
 # 定数定義
 Y3RESET_GPIO = 18   # Wi-SUNリセット用GPIO
+Y3WKUP_GPIO = 23    # Wi-SUN起動用GPIO
 LED_GPIO = 4        # LED用GPIO
 
 # ログファイル関連
@@ -43,8 +44,10 @@ def gpio_init():
     gpio.setmode(gpio.BCM)
 
     gpio.setup(Y3RESET_GPIO, gpio.OUT)
+    gpio.setup(Y3WKUP_GPIO, gpio.OUT)
     gpio.setup(LED_GPIO, gpio.OUT)
 
+    gpio.output(Y3WKUP_GPIO, gpio.HIGH)
     gpio.output(Y3RESET_GPIO, gpio.HIGH)
     time.sleep(0.1)
 
@@ -90,6 +93,11 @@ def y3reset():
     gpio.output(Y3RESET_GPIO, gpio.HIGH)
     time.sleep(2.0)
 
+def y3wakeup():
+    """Wi-Sunモジュールのスリープ復帰"""
+    gpio.output(Y3WKUP_GPIO, gpio.LOW)     # high -> low -> high
+    time.sleep(0.1)
+    gpio.output(Y3WKUP_GPIO, gpio.HIGH)
 
 class Y3ModuleSub(Y3Module):
     """Y3Module()のサブクラス"""
@@ -635,9 +643,11 @@ if __name__ == '__main__':
                     if not pana_done:
                         break       # PANA認証失敗でbreakする
 
+                y3.set_sleep_mode()
                 while True:
                     if (time.time() - start) >= user_conf.SEM_INTERVAL:
                         start = time.time()
+                        y3wakeup()
                         break
                     else:
                         time.sleep(0.1)
@@ -687,9 +697,12 @@ if __name__ == '__main__':
                                 errmsg = '[Error]: ECHONET Lite frame error\n'
                                 sys.stdout.write(errmsg)
                             
+                        elif msg_list['COMMAND'] == 'EVENT C0':
+                            sys.stdout.write('[Get]: wake up\n')
                         else:   # 電文が壊れている???
-                            errmsg = '[Error]: Unknown data received.\n'
+                            errmsg = '[Error]: Unknown data received. '
                             sys.stdout.write(errmsg)
+                            sys.stdout.write('(' + msg_list['COMMAND'] + ')\n')
 
                     else:   # GetRes待ち
                         while sem_inf_list:

@@ -40,6 +40,10 @@ class Y3Module(threading.Thread):
         self.msg_list_lock = threading.Lock()   # msg_listの排他制御用
 
 
+    def set_sleep_mode(self):
+        """スリープモードへ移行"""
+        self.write(b'SKDSLEEP\r\n', ['OK'])
+
     def set_opt(self, flag):
         """ERXUDP, ERXTCPのフォーマット設定
             flag: True: ASCII
@@ -312,6 +316,8 @@ class Y3Module(threading.Thread):
 
         if cols[0] == 'EVENT':
             msg_list['COMMAND'] = cols[0] + ' ' + cols[1]
+            if len(cols) == 2:
+                return msg_list
             msg_list['SENDER'] = cols[2]
             if len(cols) == 4:
                 msg_list['PARAM'] = cols[3]
