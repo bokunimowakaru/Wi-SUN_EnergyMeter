@@ -28,8 +28,6 @@ LED_GPIO = 4        # LED用GPIO
 TMP_LOG_DIR = '/tmp/'               # 一次ログディレクトリ
 LOG_DIR = 'sem_app/public/logs/'    # ログ用ディレクトリ, 本スクリプトからの相対パス
 SOCK_FILE = TMP_LOG_DIR + 'sem.sock'    # UNIXソケット
-SOCK_UDP = '192.168.0.128'              # UDPソケットIPアドレス
-SOCK_PORT = 0                           # UDPポート番号（0でOFF）
 DEVICE = 'meter_1,'                     # UDP送信用デバイス名 8文字
 TMP_LOG_FILE = TMP_LOG_DIR + 'sem.csv'  # 一時ログファイル
 
@@ -449,7 +447,7 @@ if __name__ == '__main__':
     except:
         sock = None
 
-    if SOCK_PORT:
+    if user_conf.SOCK_PORT:
         sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
         sock_udp = None
@@ -702,7 +700,7 @@ if __name__ == '__main__':
                                     if sock_udp: # UDPでテキスト送信
                                         msg = ('{} {}\n'.format(DEVICE,watt_int)).encode('utf-8')
                                         try:
-                                            sock_udp.sendto(msg, (SOCK_UDP, SOCK_PORT))
+                                            sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
                                         except:
                                             sys.stdout.write('[Error]: Broken UDP socket.\n')
                             
