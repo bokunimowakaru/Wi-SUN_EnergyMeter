@@ -139,17 +139,13 @@ class Y3Module(threading.Thread):
             return result
         except:     # IndexErrorが発生するときのための暫定処理。要検討
             result = False
-
             
     
     def restart_pac(self):
         """PaCをリスタート"""
-        res = self.write(b'SKREJOIN\r\n', [['EVENT 24', 'EVENT 25', 'FAIL ER10']], ignore = True, timeout = 10)
-        try:
-            result = True if res[0]['COMMAND'] == 'EVENT 25' else False
-            return result
-        except:     # IndexErrorが発生するときのための暫定処理。要検討
-            result = False
+        res = self.write(b'SKREJOIN\r\n', [['OK', 'EVENT 21', 'EVENT 25', 'FAIL ER10']], ignore = True, timeout = 10)
+        result = True if res[3]['COMMAND'] == 'EVENT 25' else False
+        return result
 
             
     def pac_terminate(self):
