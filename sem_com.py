@@ -776,7 +776,7 @@ if __name__ == '__main__':
 		os.remove(TMP_LOG_FILE)
 
 	if LCD_LOG:
-		sys.stdout.write('Wi-SUN  Bye.\n')
+		sys.stdout.write('[EOF]\n\n')
 	else:
 		sys.stdout.write('Bye.\n')
 	sys.exit(0)
