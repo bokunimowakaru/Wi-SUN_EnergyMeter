@@ -12,11 +12,13 @@ Wi-SUNモジュールを低消費電力で動作させるためのスリープ�
 Raspberry Pi のGPIO23をWi-SUNモジュールのWKUP端子へ接続してください。（スリープからの復帰に必要です。）
 
 ##I2C小型液晶を使用する場合
-下記のドライバをインストールしてください。
+下記のドライバをインストールして、run_lcd.shを実行してください。
 
 	git clone https://github.com/bokunimowakaru/RaspberryPi.git
 	cd RaspberryPi/gpio
 	make
+	cd ~/Wi-SUN_EnergyMeter
+	./run_lcd.sh
 
 元のソースはこちら：
 README_original.md
