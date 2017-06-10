@@ -23,6 +23,7 @@ import user_conf
 Y3RESET_GPIO = 18	# Wi-SUNリセット用GPIO
 Y3WKUP_GPIO = 23	# Wi-SUN起動用GPIO
 LED_GPIO = 4		# LED用GPIO
+LCD_LOG = True		# LCD表示用(8桁2行)の短いログ出力
 
 # ログファイル関連
 TMP_LOG_DIR = '/tmp/'				# 一次ログディレクトリ
@@ -120,8 +121,10 @@ class Y3ModuleSub(Y3Module):
 
 				# debug: UDP(PANA)の受信
 				if msg_list['COMMAND'] == 'ERXUDP' and msg_list['LPORT'] == self.Y3_UDP_PANA_PORT:
-					sys.stdout.write('[PANA]: {}\n'.format(msg_list['DATA']))
-
+					if LCD_LOG:
+						sys.stdout.write('PANA    ERXUDP\n')
+					else:
+						sys.stdout.write('[PANA]: {}\n'.format(msg_list['DATA']))
 				# スマートメーターが自発的に発するプロパティ通知
 				if msg_list['COMMAND'] == 'ERXUDP' and msg_list['DATA'][0:4] == self.EHD \
 							and msg_list['DATA'][20:22] == self.ECV_INF:
@@ -407,7 +410,10 @@ if __name__ == '__main__':
 	if args.delay:	# スクリプトをスタートするまでの待ち時間。sem_appとの連携時にsem_com.pyのスタートを遅らせる。
 		if isinstance(args.delay, int):
 			ws = args.delay
-			sys.stdout.write('Waiting for {} seconds...\n'.format(ws))
+			if LCD_LOG:
+				sys.stdout.write('Waiting for {} s\n'.format(ws))
+			else:
+				sys.stdout.write('Waiting for {} seconds...\n'.format(ws))
 			time.sleep(ws)
 
 	os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -417,8 +423,11 @@ if __name__ == '__main__':
 	
 	pana_ts = 0.0			# 次回のPANA認証時刻を保持
 	saved_dt = datetime.datetime.now()		# 現在日時を保存
-	
-	sys.stdout.write('Log files setup...\n')
+
+	if LCD_LOG:
+		sys.stdout.write('SET UP  LogFiles\n')
+	else:
+		sys.stdout.write('Log files setup...\n')
 	result = pow_logfile_init(saved_dt) 	# ログファイル初期化
 	
 	if not result:
@@ -434,8 +443,11 @@ if __name__ == '__main__':
 	y3 = Y3ModuleSub()
 	y3.uart_open(dev='/dev/ttyAMA0', baud=115200, timeout=1)
 	y3.start()
-	sys.stdout.write('Wi-SUN reset...\n')
-	
+	if LCD_LOG:
+		sys.stdout.write('Wi-SUN  SET UP\n')
+	else:
+		sys.stdout.write('Wi-SUN reset...\n')
+
 	y3reset()
 	y3.set_echoback_off()
 	y3.set_opt(True)
@@ -457,7 +469,10 @@ if __name__ == '__main__':
 	sem_exist = False
 
 	for i in range(10):
-		sys.stdout.write('({}/10) Active scan with a duration of {}...\n'.format(i+1, user_conf.SEM_DURATION))
+		if LCD_LOG:
+			sys.stdout.write('SET UP  Scan {}\n'.format(i+1))
+		else:
+			sys.stdout.write('({}/10) Active scan with a duration of {}...\n'.format(i+1, user_conf.SEM_DURATION))
 		channel_list = y3.active_scan(user_conf.SEM_DURATION)
 		if channel_list is False:	# active_scan()をCtrl+cで終了したとき
 			break
@@ -471,27 +486,34 @@ if __name__ == '__main__':
 	if sem_exist:
 		ch = channel_list[0]
 
-		print(ch)
-		sys.stdout.write('Energy Meter: [Ch.0x{:02X}, Addr.{}, LQI.{}, PAN.0x{:04X}]\n'.format(ch['Channel'],
-						 ch['Addr'], ch['LQI'], ch['Pan ID']))
+		if LCD_LOG == False:
+			print(ch)
+			sys.stdout.write('Energy Meter: [Ch.0x{:02X}, Addr.{}, LQI.{}, PAN.0x{:04X}]\n'.format(ch['Channel'],
+							 ch['Addr'], ch['LQI'], ch['Pan ID']))
 
 		# チャンネル設定
 		y3.set_channel(ch['Channel'])
-		sys.stdout.write('Set channel to 0x{:02X}\n'.format(ch['Channel']))
+		if LCD_LOG == False:
+			sys.stdout.write('Set channel to 0x{:02X}\n'.format(ch['Channel']))
 
 		# スマートメータのIP6アドレス
 		ip6 = y3.get_ip6(ch['Addr'])
-		sys.stdout.write('IP6 address is \'{}\'\n'.format(ip6))
+		if LCD_LOG == False:
+			sys.stdout.write('IP6 address is \'{}\'\n'.format(ip6))
 
 		# PAN ID
 		y3.set_pan_id(ch['Pan ID'])
-		sys.stdout.write('Set PAN ID to 0x{:04X}\n'.format(ch['Pan ID']))
+		if LCD_LOG == False:
+			sys.stdout.write('Set PAN ID to 0x{:04X}\n'.format(ch['Pan ID']))
 
 		# PANA認証(PaC)
 		sem_exist = False
 		pana_done = False
 		for i in range(10):
-			sys.stdout.write('({}/10) PANA connection...\n'.format(i+1))
+			if LCD_LOG:
+				sys.stdout.write('Connect {}\n'.format(i+1))
+			else:
+				sys.stdout.write('({}/10) PANA connection...\n'.format(i+1))
 			sem_exist = y3.start_pac(ip6)
 			
 			if sem_exist:		# インスタンスリスト通知の受信待ち
@@ -500,12 +522,15 @@ if __name__ == '__main__':
 					if sem_inf_list:
 					#	pana_ts = time.time() + 12 * 60 * 60	# 次回の認証時刻を保存
 						pana_ts = time.time() + 60				# 60秒後(デバッグ用)
-						sys.stdout.write('Successfully done.\n')
+						if LCD_LOG:
+							sys.stdout.write('Connect done.\n')
+						else:
+							sys.stdout.write('Successfully done.\n')
 						time.sleep(3)
 						pana_done = True
 						break
 					elif time.time() - st > 15: 	# PANA認証失敗によるタイムアウト
-						sys.stdout.write('Fail to connect.\n')
+						sys.stderr.write('Fail to connect.\n')
 						sem_exist = False
 						pana_done = False
 						break
@@ -617,7 +642,8 @@ if __name__ == '__main__':
 					result = binascii.b2a_hex(edt)
 					
 				sem_info[epc] = result
-				sys.stdout.write('[Get]: {}, {}\n'.format(epc, result))
+				if LCD_LOG == False:
+					sys.stdout.write('[Get]: {}, {}\n'.format(epc, result))
 
 			else:  # Get失敗x10
 				sys.stderr.write('[Error]: Can not get {}.\n'.format(epc))
@@ -652,7 +678,10 @@ if __name__ == '__main__':
 									
 								else:
 									watt_int = int.from_bytes(parsed_data['ptys'][0]['edt'], 'big', signed=True)
-									sys.stdout.write('[{:5d}] {:4d} W\n'.format(tid_counter, watt_int))
+									if LCD_LOG:
+										sys.stdout.write('SmartMTR{:4d} W\n'.format(watt_int))
+									else:
+										sys.stdout.write('[{:5d}] {:4d} W\n'.format(tid_counter, watt_int))
 							
 									try:	# 一時ログファイルに書き込み
 										f = open(TMP_LOG_FILE, 'a') 	   # rcd_time[ms] (JavaScript用)
@@ -682,7 +711,8 @@ if __name__ == '__main__':
 								sys.stderr.write(errmsg)
 							
 						elif msg_list['COMMAND'] == 'EVENT C0':
-							sys.stdout.write('[Get]: wake up\n')
+							if LCD_LOG == False:
+								sys.stdout.write('[Get]: wake up\n')
 						
 						else:	# 電文が壊れている???
 							errmsg = '[Error]: Unknown data received. '
@@ -692,7 +722,8 @@ if __name__ == '__main__':
 					else:	# GetRes待ち
 						while sem_inf_list:
 							inf = sem_inf_list.pop(0)
-							sys.stdout.write('[Inf]: {}\n'.format(inf['DATA']))
+							if LCD_LOG == False:
+								sys.stdout.write('[Inf]: {}\n'.format(inf['DATA']))
 						
 						if time.time() - start > 20:	# GetRes最大待ち時間: 20s
 							sys.stderr.write('[Error]: Time out. @loop\n')
@@ -731,7 +762,10 @@ if __name__ == '__main__':
 		except:
 			sys.stderr.write('[Error]: Broken socket.\n')
 
-	sys.stdout.write('\nWi-SUN reset...\n')
+	if LCD_LOG:
+		sys.stdout.write('Wi-SUN  RESET\n')
+	else:
+		sys.stdout.write('\nWi-SUN reset...\n')
 	y3reset()
 	y3.terminate()
 	y3.uart_close()
@@ -741,5 +775,8 @@ if __name__ == '__main__':
 	if os.path.exists(TMP_LOG_FILE):
 		os.remove(TMP_LOG_FILE)
 
-	sys.stdout.write('Bye.\n')
+	if LCD_LOG:
+		sys.stdout.write('Wi-SUN  Bye.\n')
+	else:
+		sys.stdout.write('Bye.\n')
 	sys.exit(0)
