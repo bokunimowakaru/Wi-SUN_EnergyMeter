@@ -26,7 +26,7 @@ import user_conf
 Y3RESET_GPIO = 18						# Wi-SUNリセット用GPIO
 Y3WKUP_GPIO = 23						# Wi-SUN起動用GPIO
 LED_GPIO = 4							# LED用GPIO
-LCD_LOG = False							# LCD表示用(8桁2行)の短いログ出力
+LCD_LOG = True							# LCD表示用(8桁2行)の短いログ出力
 PAC_LIFETIME = 12 * 60 * 60				# PANAクライアントの認証間隔
 
 # ログファイル関連
