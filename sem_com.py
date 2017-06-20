@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 # coding: UTF-8
 
+# 24時間でPANA認証が切れて通信が出来なくなる　2度目に失敗するみたい
+
+
 import argparse
 import binascii
 import datetime
@@ -20,21 +23,22 @@ import user_conf
 
 
 # 定数定義
-Y3RESET_GPIO = 18	# Wi-SUNリセット用GPIO
-Y3WKUP_GPIO = 23	# Wi-SUN起動用GPIO
-LED_GPIO = 4		# LED用GPIO
-LCD_LOG = True		# LCD表示用(8桁2行)の短いログ出力
+Y3RESET_GPIO = 18						# Wi-SUNリセット用GPIO
+Y3WKUP_GPIO = 23						# Wi-SUN起動用GPIO
+LED_GPIO = 4							# LED用GPIO
+LCD_LOG = False							# LCD表示用(8桁2行)の短いログ出力
+PAC_LIFETIME = 12 * 60 * 60				# PANAクライアントの認証間隔
 
 # ログファイル関連
-TMP_LOG_DIR = '/tmp/'				# 一次ログディレクトリ
-LOG_DIR = 'sem_app/public/logs/'	# ログ用ディレクトリ, 本スクリプトからの相対パス
+TMP_LOG_DIR = 'logs/tmp/'				# 一次ログディレクトリ
+LOG_DIR = 'logs/csv/'					# ログ用ディレクトリ, 本スクリプトからの相対パス
 SOCK_FILE = TMP_LOG_DIR + 'sem.sock'	# UNIXソケット
 DEVICE = 'meter_1,' 					# UDP送信用デバイス名 8文字
 TMP_LOG_FILE = TMP_LOG_DIR + 'sem.csv'	# 一時ログファイル
 
 POW_DAYS_JSON_FILE = LOG_DIR + 'pow_days.json'	# JSON形式の電力ログファイル
-POW_DAY_LOG_HEAD = 'pow_day_'	# 日別ログファイル名の先頭
-POW_DAY_LOG_FMT = '%Y%m%d'		#		 日時フォーマット
+POW_DAY_LOG_HEAD = 'pow_day_'			# 日別ログファイル名の先頭
+POW_DAY_LOG_FMT = '%Y%m%d'				#		 日時フォーマット
 
 # 低圧スマート電力量計 情報保存用リスト
 sem_info = {}
@@ -100,7 +104,7 @@ def y3wakeup():
 	gpio.output(Y3WKUP_GPIO, gpio.LOW)	   # high -> low -> high
 	time.sleep(0.1)
 	gpio.output(Y3WKUP_GPIO, gpio.HIGH)
-	time.sleep(0.1)
+	time.sleep(0.2)
 
 class Y3ModuleSub(Y3Module):
 	"""Y3Module()のサブクラス"""
@@ -119,7 +123,8 @@ class Y3ModuleSub(Y3Module):
 			if msg:
 				msg_list = self.parse_message(msg)
 
-				# debug: UDP(PANA)の受信
+				# sys.stdout.write('[MSG]: {}\n'.format(msg_list))			 # 全受信データ（リスト化済み）表示 DEBUG
+				# UDP(PANA)の受信
 				if msg_list['COMMAND'] == 'ERXUDP' and msg_list['LPORT'] == self.Y3_UDP_PANA_PORT:
 					if LCD_LOG:
 						sys.stdout.write('PANA    ERXUDP\n')
@@ -129,7 +134,10 @@ class Y3ModuleSub(Y3Module):
 				if msg_list['COMMAND'] == 'ERXUDP' and msg_list['DATA'][0:4] == self.EHD \
 							and msg_list['DATA'][20:22] == self.ECV_INF:
 					sem_inf_list.append(msg_list)
-
+					if LCD_LOG:
+						sys.stdout.write('PANA    appended\n')
+					else:
+						sys.stdout.write('[PANA]: appended {}\n'.format(msg_list))
 				elif self.search['search_words']:	  # サーチ中である
 					# サーチワードを受信した。
 					search_words = self.search['search_words'][0]
@@ -404,6 +412,7 @@ def arg_parse():
 	return args
 
 
+# メイン部
 if __name__ == '__main__':
 
 	args = arg_parse()
@@ -450,6 +459,7 @@ if __name__ == '__main__':
 
 	y3reset()
 	y3.set_echoback_off()
+	y3.set_auto_pac
 	y3.set_opt(True)
 	y3.set_password(user_conf.SEM_PASSWORD)
 	y3.set_routeb_id(user_conf.SEM_ROUTEB_ID)
@@ -520,8 +530,8 @@ if __name__ == '__main__':
 				st = time.time()
 				while True:
 					if sem_inf_list:
-					#	pana_ts = time.time() + 12 * 60 * 60	# 次回の認証時刻を保存
-						pana_ts = time.time() + 60				# 60秒後(デバッグ用)
+						pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
+						# pana_ts = time.time() + 120				# 120秒後(デバッグ用)
 						if LCD_LOG:
 							sys.stdout.write('Connect done.\n')
 						else:
@@ -655,6 +665,37 @@ if __name__ == '__main__':
 		start = time.time()
 		while True:
 			try:
+				if (time.time() - pana_ts > 0):	  # 12時間毎にPANA認証を更新
+					sys.stdout.write('PANA re-connection...\n')
+					sem_exist = y3.restart_pac()
+					if sem_exist:
+						pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
+						sys.stdout.write('Requested PANA re-connection done.\n')
+					else:
+						pana_ts = time.time() + 60				# 60秒後に再認証
+						sys.stdout.write('Fail to connect.\n')
+					'''
+						sem_exist = False
+						pana_done = False
+						st = time.time()
+						while True:
+							if sem_inf_list:
+								pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
+								sys.stdout.write('Successfully done.\n')			   
+								time.sleep(3)
+								pana_done = True
+								break
+							elif time.time() - st > 20: 	# PANA認証失敗によるタイムアウト
+								pana_done = False
+								pana_ts = time.time() + 60				# 60秒後に再認証
+								sys.stdout.write('Fail to connect.\n')
+								break
+							else:
+								time.sleep(0.1) 					   
+					
+					if not pana_done:
+						break		# PANA認証失敗でbreakする
+					'''
 				sem_get('instant_power')	# Get
 				
 				while True: 	# GetRes待ちループ		  
@@ -712,7 +753,7 @@ if __name__ == '__main__':
 							
 						elif msg_list['COMMAND'] == 'EVENT C0':
 							if LCD_LOG == False:
-								sys.stdout.write('[Get]: wake up\n')
+								sys.stdout.write('[PS]: wake up\n')
 						
 						else:	# 電文が壊れている???
 							errmsg = '[Error]: Unknown data received. '
@@ -741,17 +782,21 @@ if __name__ == '__main__':
 			except KeyboardInterrupt:
 				break
 
+			if LCD_LOG == False:
+				sys.stdout.write('[PS]: Go to sleep\n')
 			sys.stdout.flush()
 			sys.stderr.flush()
-			y3.set_sleep_mode()
-			while True:
-				if (time.time() - start) >= user_conf.SEM_INTERVAL:
-					start = time.time()
-					y3wakeup()
-					break
-				else:
-					time.sleep(1)
-	
+			if user_conf.SEM_INTERVAL > 0:
+				y3.set_sleep_mode()
+				while True:
+					if (time.time() - start) >= user_conf.SEM_INTERVAL:
+						start = time.time()
+						y3wakeup()
+						break
+					else:
+						time.sleep(1)
+			else:
+				time.sleep(1)
 	else:
 		sys.stderr.write('[Error]: Can not connect with a smart energy meter.\n')
 
