@@ -1,4 +1,4 @@
-## Wi-Sun_EnergyMeter（ワイサンエナジーメーター） パワーセーブ対応版
+# Wi-Sun_EnergyMeter パワーセーブ対応版
 
 Wi-SUNモジュールを低消費電力で動作させるためのスリープモードを追加しました。
 スリープ機能を使用しない場合、Wi-SUNモジュールの消費電力は約25mAですが、約1/1000の30μA程度まで下げることが出来ます。
@@ -41,7 +41,7 @@ Branch patch-1: https://github.com/bokunimowakaru/Wi-SUN_EnergyMeter/tree/patch-
 	(認証時の不具合修正版)
 
 
-# 元のソースの所在
+## 元のソースの所在
 
 以下に元のソースコードを保存しています。
 
@@ -51,12 +51,13 @@ Branch master: https://github.com/bokunimowakaru/Wi-SUN_EnergyMeter/tree/master
 原作者のページ: https://github.com/yawatajunk/Wi-SUN_EnergyMeter
 
 ---------------------------------------------------------------------------------
-# 主な変更点
+## 元のソースからの主な変更点
 
-1. ディープスリープ対応(機能追加)
-2. I2C小型液晶への表示(機能追加)
+1. ディープスリープ機能の追加
+2. I2C小型液晶への表示機能の追加
 3. 認証時のバグ修正
 4. 再認証時のバグ修正
 5. スマホ表示機能の削除
+6. 実行用スクリプトの追加
 
 以上
