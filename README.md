@@ -50,4 +50,13 @@ Branch master: https://github.com/bokunimowakaru/Wi-SUN_EnergyMeter/tree/master
 
 原作者のページ: https://github.com/yawatajunk/Wi-SUN_EnergyMeter
 
+---------------------------------------------------------------------------------
+# 主な変更点
+
+1. ディープスリープ対応(機能追加)
+2. I2C小型液晶への表示(機能追加)
+3. 認証時のバグ修正
+4. 再認証時のバグ修正
+5. スマホ表示機能の削除
+
 以上
