@@ -663,6 +663,7 @@ if __name__ == '__main__':
 	if sem_exist:
 		time.sleep(3)
 		start = time.time()
+		LCD_DT = True
 		while True:
 			try:
 				if (time.time() - pana_ts > 0):	  # 12時間毎にPANA認証を更新
@@ -719,8 +720,17 @@ if __name__ == '__main__':
 									
 								else:
 									watt_int = int.from_bytes(parsed_data['ptys'][0]['edt'], 'big', signed=True)
+									t = datetime.datetime.today()
 									if LCD_LOG:
-										sys.stdout.write('SmartMTR{:4d} W\n'.format(watt_int))
+									#	sys.stdout.write('SmartMTR')
+										if LCD_DT == True:
+											LCD_DT = False
+											t_str = t.strftime('%y/%m/%d')
+										else:
+											LCD_DT = True
+											t_str = t.strftime('%H:%M:%S')
+										sys.stdout.write(t_str)
+										sys.stdout.write('{:4d} W\n'.format(watt_int))
 									else:
 										sys.stdout.write('[{:5d}] {:4d} W\n'.format(tid_counter, watt_int))
 							
