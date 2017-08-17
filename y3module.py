@@ -158,14 +158,14 @@ class Y3Module(threading.Thread):
 		# sys.stdout.write('[DEBUG]: {}\n'.format(res))				#debug
 		try:
 			if res[0]['COMMAND'] == 'EVENT 25':
-				#sys.stdout.write('[PAC]: OK\n')					#debug
+				sys.stdout.write('[PAC]: OK\n')						#debug
 				result = True
 			else:
 				#sys.stdout.write('[PAC]: no command\n')			#debug
 				result = False
 			return result 
 		except:	 # IndexErrorが発生するときのための暫定処理。要検討 
-			sys.stderr.write('[ERR]: IndexError\n')				#debug
+			sys.stderr.write('[Error]: IndexError\n')				#debug
 			result = False 
 		'''
 		res = self.write(b'SKREJOIN\r\n', [['OK', 'EVENT 21', 'EVENT 25', 'FAIL ER10']], ignore = True, timeout = 10)
@@ -220,7 +220,8 @@ class Y3Module(threading.Thread):
 						 sec_bt + len_bt + message, ['EVENT 21', 'OK'])
 
 		if res[0]['PARAM'] == '01':
-			sys.stdout.write('[Error]: UDP transmission.\n')
+			sys.stderr.write('[Error]: UDP transmission.\n')
+			sys.stderr.write('[RES]: res' + '\n')
 			if self.get_tx_limit():
 				sys.stdout.write('[Error]: TX limit.\n')
 			return False

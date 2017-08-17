@@ -472,6 +472,8 @@ if __name__ == '__main__':
 
 	if user_conf.SOCK_PORT:
 		sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		sock_udp.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		# sock_udp.bind((user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 	else:
 		sock_udp = None
 
@@ -666,9 +668,9 @@ if __name__ == '__main__':
 		LCD_DT = True
 		while True:
 			try:
-				if (time.time() - pana_ts > 0):	  # 12時間毎にPANA認証を更新
+				if (time.time() - pana_ts > 0):					# 12時間毎にPANA認証を更新
 					sys.stdout.write('PANA re-connection...\n')
-					sem_exist = y3.restart_pac()
+					sem_exist = y3.restart_pac()				# PAC Restert
 					if sem_exist:
 						pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
 						sys.stdout.write('Requested PANA re-connection done.\n')
@@ -730,7 +732,7 @@ if __name__ == '__main__':
 											LCD_DT = True
 											t_str = t.strftime('%H:%M:%S')
 										sys.stdout.write(t_str)
-										sys.stdout.write('{:4d} W\n'.format(watt_int))
+										sys.stdout.write('{:5d} W\n'.format(watt_int))
 									else:
 										sys.stdout.write('[{:5d}] {:4d} W\n'.format(tid_counter, watt_int))
 							
@@ -751,6 +753,7 @@ if __name__ == '__main__':
 									if sock_udp: # UDPでテキスト送信
 										msg = ('{} {}\n'.format(DEVICE,watt_int)).encode('utf-8')
 										try:
+											# sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 											sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 										except:
 											sys.stderr.write('[Error]: Broken UDP socket.\n')
@@ -777,7 +780,7 @@ if __name__ == '__main__':
 								sys.stdout.write('[Inf]: {}\n'.format(inf['DATA']))
 						
 						if time.time() - start > 20:	# GetRes最大待ち時間: 20s
-							sys.stderr.write('[Error]: Time out. @loop\n')
+							sys.stderr.write('[Error]: Time out. @loop\n')	#このエラーが表示される
 							
 							try:	# 一時ログファイルに書き込み
 								f = open(TMP_LOG_FILE, 'a')
