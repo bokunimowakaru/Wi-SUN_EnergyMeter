@@ -1,6 +1,5 @@
 #!/bin/bash
-kill `pidof -x sem_com.py` &> /dev/null
+sudo kill `pidof -x sem_com.py` &> /dev/null
 sleep 3
-#nohup ./sem_com.py < /dev/null > /dev/null 2> error.log &
-nohup ./sem_com.py < /dev/null 2> error.log | /home/pi/RaspberryPi/gpio/raspi_lcd -f -r24 &
+nohup ./sem_com.py 2> error.log | tee sem_com.log | /home/pi/RaspberryPi/gpio/raspi_lcd -f -r24 &> lcd.log &
 echo "done"

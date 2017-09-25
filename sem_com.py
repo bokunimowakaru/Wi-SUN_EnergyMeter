@@ -751,7 +751,7 @@ if __name__ == '__main__':
 											sys.stderr.write('[Error]: Broken socket.\n')
 
 									if sock_udp: # UDPでテキスト送信
-										msg = ('{} {}\n'.format(DEVICE,watt_int)).encode('utf-8')
+										msg = ('{} {}\r\n'.format(DEVICE,watt_int)).encode('utf-8')
 										try:
 											# sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 											sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
