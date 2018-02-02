@@ -189,12 +189,16 @@ def sem_get_getres(epc):
 			msg_list = y3.dequeue_message() # 受信データ取り出し
 			if msg_list['COMMAND'] == 'ERXUDP':
 				parsed_data = sem.parse_frame(msg_list['DATA'])
-				if parsed_data['tid'] != tid_counter:
-					errmsg = '[Error]: ECHONET Lite TID mismatch\n'
-					sys.stderr.write(errmsg)
-					return False
+				if parsed_data:
+					if parsed_data['tid'] != tid_counter:
+						errmsg = '[Error]: ECHONET Lite TID mismatch\n'
+						sys.stderr.write(errmsg)
+						return False
+					else:
+						return msg_list['DATA']
 				else:
-					return msg_list['DATA']
+					sys.stderr.write('[Error]: Unknown data received.\n')
+					return False
 			else:
 				sys.stderr.write('[Error]: Unknown data received.\n')
 				return False
@@ -229,12 +233,16 @@ def sem_seti(epc, edt):
 			msg_list = y3.dequeue_message() # 受信データ取り出し
 			if msg_list['COMMAND'] == 'ERXUDP':
 				parsed_data = sem.parse_frame(msg_list['DATA'])
-				if parsed_data['tid'] != tid_counter:
-					errmsg = '[Error]: ECHONET Lite TID mismatch\n'
-					sys.stderr.write(errmsg)
-					return False
+				if parsed_data:
+					if parsed_data['tid'] != tid_counter:
+						errmsg = '[Error]: ECHONET Lite TID mismatch\n'
+						sys.stderr.write(errmsg)
+						return False
+					else:
+						return msg_list['DATA']
 				else:
-					return msg_list['DATA']
+					sys.stderr.write('[Error]: Unknown data received.\n')
+					return False
 			else:
 				sys.stderr.write('[Error]: Unknown data received.\n')
 				return False
@@ -276,7 +284,7 @@ def pow_logfile_init(dt):
 				return False
 		
 		if not os.path.exists(pkl_filename):	# 電力ログ(pickle)が無かったら作成する
-			result = csv2pickle(csv_filename, pkl_filename)
+			result = csv2pickle(csv_filename, pkl_filename, t)
 			if not result:
 				return False	   
 
@@ -311,7 +319,7 @@ def pow_logfile_maintainance(last_dt, new_dt):
 		file_cat(today_csv_file, TMP_LOG_FILE)
 		os.remove(TMP_LOG_FILE) 		# 一時ログファイルを削除
 		
-		csv2pickle(today_csv_file, today_pkl_file)	# pickle更新
+		csv2pickle(today_csv_file, today_pkl_file, last_dt)  # pickle更新
 
 		if last_dt.day != new_dt.day:	# 日付変更
 			pow_logfile_init(new_dt)	# 電力ログ初期化
@@ -334,7 +342,7 @@ def file_cat(file_a, file_b):
 		return False
 
 
-def csv2pickle(csvfile, pklfile):
+def csv2pickle(csvfile, pklfile, dt):
 	"""csvファイルをpickleファイルに変換"""
 	try:
 		fcsv = open(csvfile, 'r')
@@ -343,8 +351,8 @@ def csv2pickle(csvfile, pklfile):
 	except:
 		return False
 		
-	if data == []:		# 日付変更時でcsvファイルが空の場合
-		dt = datetime.date.today()	  # 現時刻から、0時0分のタイムスタンプを作成
+	if data == []:		# 新規作成のよりcsvファイルが空の場合
+		# 引数dt(datetime型)から、0時0分のタイムスタンプを作成
 		ts_origin = datetime.datetime.combine(dt, datetime.time(0, 0)).timestamp()
 	else:
 		ts = int(data[0].strip().split(',')[0]) 	# ログからタイムスタンプを取得
@@ -414,7 +422,8 @@ def arg_parse():
 
 # メイン部
 if __name__ == '__main__':
-
+	sys.stdout.write('Wi-SUN  START\n')
+	sys.stderr.write('Wi-SUN  START (stderr)\n')
 	args = arg_parse()
 	if args.delay:	# スクリプトをスタートするまでの待ち時間。sem_appとの連携時にsem_com.pyのスタートを遅らせる。
 		if isinstance(args.delay, int):
@@ -430,7 +439,7 @@ if __name__ == '__main__':
 	sem_inf_list = []		# スマートメータのプロパティ通知用
 	tid_counter = 0 		# TIDカウンタ
 	
-	pana_ts = 0.0			# 次回のPANA認証時刻を保持
+	pana_ts = 0.0			# PANA認証時のタイムスタンプを記録
 	saved_dt = datetime.datetime.now()		# 現在日時を保存
 
 	if LCD_LOG:
@@ -459,7 +468,7 @@ if __name__ == '__main__':
 
 	y3reset()
 	y3.set_echoback_off()
-	y3.set_auto_pac
+	# y3.set_auto_pac
 	y3.set_opt(True)
 	y3.set_password(user_conf.SEM_PASSWORD)
 	y3.set_routeb_id(user_conf.SEM_ROUTEB_ID)
@@ -533,7 +542,6 @@ if __name__ == '__main__':
 				while True:
 					if sem_inf_list:
 						pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
-						# pana_ts = time.time() + 120				# 120秒後(デバッグ用)
 						if LCD_LOG:
 							sys.stdout.write('Connect done.\n')
 						else:
@@ -568,11 +576,20 @@ if __name__ == '__main__':
 				data = sem_get_getres(epc)
 				if data:
 					parsed_data = sem.parse_frame(data)
-					edt = parsed_data['ptys'][0]['edt']
-					break
+					if parsed_data:
+						edt = parsed_data['ptys'][0]['edt']
+						break
+						# 不具合:epc_coefficientのときにedtが得られない Can not get epc_coefficient.
+					else:
+						continue	# Get失敗　再試行
 				else:	# Get失敗 再試行
 					continue
-			
+
+			if not(edt):
+				sys.stderr.write('[Error]: Can not get {}.\n'.format(epc))
+			#	sem_exist = False
+			#	break
+
 			if parsed_data:
 				if epc == 'operation_status':
 					result = True if edt == b'\x30' else False
@@ -656,11 +673,6 @@ if __name__ == '__main__':
 				sem_info[epc] = result
 				if LCD_LOG == False:
 					sys.stdout.write('[Get]: {}, {}\n'.format(epc, result))
-
-			else:  # Get失敗x10
-				sys.stderr.write('[Error]: Can not get {}.\n'.format(epc))
-				sem_exist = False
-				break
 		
 	if sem_exist:
 		time.sleep(3)
@@ -668,37 +680,31 @@ if __name__ == '__main__':
 		LCD_DT = True
 		while True:
 			try:
+				pana_done = False
 				if (time.time() - pana_ts > 0):					# 12時間毎にPANA認証を更新
 					sys.stdout.write('PANA re-connection...\n')
 					sem_exist = y3.restart_pac()				# PAC Restert
-					if sem_exist:
-						pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
-						sys.stdout.write('Requested PANA re-connection done.\n')
-					else:
-						pana_ts = time.time() + 60				# 60秒後に再認証
-						sys.stdout.write('Fail to connect.\n')
-					'''
+
+					if sem_exist:		# インスタンスリスト通知の受信待ち
 						sem_exist = False
-						pana_done = False
 						st = time.time()
 						while True:
 							if sem_inf_list:
 								pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
+								pana_done = True
 								sys.stdout.write('Successfully done.\n')			   
 								time.sleep(3)
-								pana_done = True
 								break
-							elif time.time() - st > 20: 	# PANA認証失敗によるタイムアウト
-								pana_done = False
-								pana_ts = time.time() + 60				# 60秒後に再認証
+							elif time.time() - st > 15: 	# PANA認証失敗によるタイムアウト
+								pana_ts = time.time() + 300				# 300秒後に再認証
 								sys.stdout.write('Fail to connect.\n')
 								break
 							else:
-								time.sleep(0.1) 					   
-					
+								time.sleep(0.1) 
+
 					if not pana_done:
 						break		# PANA認証失敗でbreakする
-					'''
+
 				sem_get('instant_power')	# Get
 				
 				while True: 	# GetRes待ちループ		  
