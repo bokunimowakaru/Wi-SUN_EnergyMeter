@@ -28,6 +28,7 @@ Y3WKUP_GPIO = 23						# Wi-SUN起動用GPIO
 LED_GPIO = 4							# LED用GPIO
 LCD_LOG = True							# LCD表示用(8桁2行)の短いログ出力
 PAC_LIFETIME = 12 * 60 * 60				# PANAクライアントの認証間隔
+# PAC_LIFETIME = 3 * 60					# DEBUG用 PANAクライアントの認証間隔
 
 # ログファイル関連
 TMP_LOG_DIR = 'logs/tmp/'				# 一次ログディレクトリ
@@ -468,7 +469,7 @@ if __name__ == '__main__':
 
 	y3reset()
 	y3.set_echoback_off()
-	# y3.set_auto_pac
+	y3.set_auto_pac
 	y3.set_opt(True)
 	y3.set_password(user_conf.SEM_PASSWORD)
 	y3.set_routeb_id(user_conf.SEM_ROUTEB_ID)
@@ -703,7 +704,8 @@ if __name__ == '__main__':
 								time.sleep(0.1) 
 
 					if not pana_done:
-						break		# PANA認証失敗でbreakする
+						sys.stderr.write('[Error]: Failed to re-connect\n')
+					#	break		# PANA認証失敗でbreakする
 
 				sem_get('instant_power')	# Get
 				
@@ -759,7 +761,6 @@ if __name__ == '__main__':
 									if sock_udp: # UDPでテキスト送信
 										msg = ('{} {}\r\n'.format(DEVICE,watt_int)).encode('utf-8')
 										try:
-											# sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 											sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 										except:
 											sys.stderr.write('[Error]: Broken UDP socket.\n')
@@ -820,6 +821,14 @@ if __name__ == '__main__':
 		sys.stderr.write('[Error]: Can not connect with a smart energy meter.\n')
 
 	# 終了処理
+
+	if sock_udp: # HALTを送信
+		msg = ('{} 0,HALT\r\n'.format(DEVICE)).encode('utf-8')
+		try:
+			sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
+		except:
+			sys.stderr.write('[Error]: Broken UDP socket.\n')
+
 	if sock:
 		try:
 			sock.close()
