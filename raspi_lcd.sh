@@ -15,10 +15,10 @@ while true; do
 	LCD=`tail -1 sem_com.log`
 	if [ -n "${LCD}" ]; then
 		if [ $SECONDS -gt $next_time ]; then
-			/home/pi/RaspberryPi/gpio/raspi_lcd -f -r24 "${LCD}" &>> raspi_lcd.log &
+			/home/pi/RaspberryPi/gpio/raspi_lcd -i -r24 "${LCD}" &>> raspi_lcd.log &
 			next_time=$(( SECONDS + 600 ))
 		else
-			/home/pi/RaspberryPi/gpio/raspi_lcd -f "${LCD}" &>> raspi_lcd.log &
+			/home/pi/RaspberryPi/gpio/raspi_lcd -i "${LCD}" &>> raspi_lcd.log &
 		fi
 	fi
 	sleep 6

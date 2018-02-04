@@ -8,7 +8,8 @@ if [ $IN = "0" ]; then
 	sleep 2
 	IN=`gpio -g read 27`
 	if [ $IN = "0" ]; then
-		kill `pidof -x sem_com.py` &> /dev/null
+		sudo kill `pidof -x sem_com.py` &> /dev/null
+		sudo kill `pidof -x raspi_lcd.sh` &> /dev/null
 		sleep 1
 		/home/pi/RaspberryPi/gpio/raspi_lcd -i "Killed  sem_com"
 		sleep 3
