@@ -45,6 +45,14 @@ POW_DAY_LOG_FMT = '%Y%m%d'				#		 日時フォーマット
 sem_info = {}
 
 
+# エラー・ログ
+def error_log(msg):
+	t = datetime.datetime.today()
+	t_str = t.strftime('%y/%m/%d %H:%M:%S')
+	sys.stderr.write(t_str)
+	sys.stderr.write(' ' + msg)
+
+
 def gpio_init():
 	"""GPIO初期化"""
 	gpio.setwarnings(False)
@@ -193,20 +201,20 @@ def sem_get_getres(epc):
 				if parsed_data:
 					if parsed_data['tid'] != tid_counter:
 						errmsg = '[Error]: ECHONET Lite TID mismatch\n'
-						sys.stderr.write(errmsg)
+						error_log(errmsg)
 						return False
 					else:
 						return msg_list['DATA']
 				else:
-					sys.stderr.write('[Error]: Unknown data received.\n')
+					error_log('[Error]: Unknown data received.\n')
 					return False
 			else:
-				sys.stderr.write('[Error]: Unknown data received.\n')
+				error_log('[Error]: Unknown data received.\n')
 				return False
 
 		else:	# データ未受信
 			if time.time() - start > 20:	# タイムアウト 20s
-				sys.stderr.write('[Error]: Time out. @get_getres\n')
+				error_log('[Error]: Time out. @get_getres\n')
 				return False
 			time.sleep(0.01)
 
@@ -237,20 +245,20 @@ def sem_seti(epc, edt):
 				if parsed_data:
 					if parsed_data['tid'] != tid_counter:
 						errmsg = '[Error]: ECHONET Lite TID mismatch\n'
-						sys.stderr.write(errmsg)
+						error_log(errmsg)
 						return False
 					else:
 						return msg_list['DATA']
 				else:
-					sys.stderr.write('[Error]: Unknown data received.\n')
+					error_log('[Error]: Unknown data received.\n')
 					return False
 			else:
-				sys.stderr.write('[Error]: Unknown data received.\n')
+				error_log('[Error]: Unknown data received.\n')
 				return False
 
 		else:	# データ未受信
 			if time.time() - start > 20:	# タイムアウト 20s
-				sys.stderr.write('[Error]: Time out. @seti\n')
+				error_log('[Error]: Time out. @seti\n')
 				return False
 			time.sleep(0.01)
 
@@ -424,7 +432,7 @@ def arg_parse():
 # メイン部
 if __name__ == '__main__':
 	sys.stdout.write('Wi-SUN  START\n')
-	sys.stderr.write('Wi-SUN  START (stderr)\n')
+	error_log('Wi-SUN  START (stderr)\n')
 	args = arg_parse()
 	if args.delay:	# スクリプトをスタートするまでの待ち時間。sem_appとの連携時にsem_com.pyのスタートを遅らせる。
 		if isinstance(args.delay, int):
@@ -450,7 +458,7 @@ if __name__ == '__main__':
 	result = pow_logfile_init(saved_dt) 	# ログファイル初期化
 	
 	if not result:
-		sys.stderr.write('[Error]: Log file error\n')
+		error_log('[Error]: Log file error\n')
 		sys.exit(-1)
 
 	gpio_init()
@@ -503,7 +511,7 @@ if __name__ == '__main__':
 			break
 	
 	if not sem_exist:	# スキャン失敗
-		sys.stderr.write('[Error]: Can not connect to a smart energy meter\n')
+		error_log('[Error]: Can not connect to a smart energy meter\n')
 
 	if sem_exist:
 		ch = channel_list[0]
@@ -551,7 +559,7 @@ if __name__ == '__main__':
 						pana_done = True
 						break
 					elif time.time() - st > 15: 	# PANA認証失敗によるタイムアウト
-						sys.stderr.write('Fail to connect.\n')
+						error_log('Fail to connect.\n')
 						sem_exist = False
 						pana_done = False
 						break
@@ -587,7 +595,7 @@ if __name__ == '__main__':
 					continue
 
 			if not(edt):
-				sys.stderr.write('[Error]: Can not get {}.\n'.format(epc))
+				error_log('[Error]: Can not get {}.\n'.format(epc))
 			#	sem_exist = False
 			#	break
 
@@ -693,18 +701,18 @@ if __name__ == '__main__':
 							if sem_inf_list:
 								pana_ts = time.time() + PAC_LIFETIME	# 次回の認証時刻を保存(12時間後)
 								pana_done = True
-								sys.stdout.write('Successfully done.\n')			   
+								sys.stdout.write('Successfully done.\n')	# 成功しない
 								time.sleep(3)
 								break
 							elif time.time() - st > 15: 	# PANA認証失敗によるタイムアウト
-								pana_ts = time.time() + 300				# 300秒後に再認証
+								pana_ts = time.time() + PAC_LIFETIME / 2	# 6時間後に再認証
 								sys.stdout.write('Fail to connect.\n')
 								break
 							else:
 								time.sleep(0.1) 
 
 					if not pana_done:
-						sys.stderr.write('[Error]: Failed to re-connect\n')
+						error_log('[Error]: Failed to re-connect\n')
 					#	break		# PANA認証失敗でbreakする
 
 				sem_get('instant_power')	# Get
@@ -726,7 +734,7 @@ if __name__ == '__main__':
 							if parsed_data:
 								if parsed_data['tid'] != tid_counter:
 									errmsg = '[Error]: ECHONET Lite TID mismatch\n'
-									sys.stderr.write(errmsg)
+									error_log(errmsg)
 									
 								else:
 									watt_int = int.from_bytes(parsed_data['ptys'][0]['edt'], 'big', signed=True)
@@ -749,27 +757,27 @@ if __name__ == '__main__':
 										f.write('{},{}\n'.format(round(rcd_time), watt_int))
 										f.close()
 									except:
-										sys.stderr.write('[Error]: can not write to file.\n')
+										error_log('[Error]: can not write to file.\n')
 							
 									if sock:  # UNIXドメインソケットで送信
 										sock_data = json.dumps({'time': rcd_time, 'power': watt_int}).encode('utf-8')
 										try:
 											sock.send(sock_data)
 										except:
-											sys.stderr.write('[Error]: Broken socket.\n')
+											error_log('[Error]: Broken socket.\n')
 
 									if sock_udp: # UDPでテキスト送信
 										msg = ('{} {}\r\n'.format(DEVICE,watt_int)).encode('utf-8')
 										try:
 											sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 										except:
-											sys.stderr.write('[Error]: Broken UDP socket.\n')
+											error_log('[Error]: Broken UDP socket.\n')
 							
 									break
 							
 							else:	# 電文が壊れている
 								errmsg = '[Error]: ECHONET Lite frame error\n'
-								sys.stderr.write(errmsg)
+								error_log(errmsg)
 							
 						elif msg_list['COMMAND'] == 'EVENT C0':
 							if LCD_LOG == False:
@@ -777,8 +785,8 @@ if __name__ == '__main__':
 						
 						else:	# 電文が壊れている???
 							errmsg = '[Error]: Unknown data received. '
-							sys.stderr.write(errmsg)
-							sys.stderr.write('(' + msg_list['COMMAND'] + ')\n')
+							error_log(errmsg)
+							error_log('(' + msg_list['COMMAND'] + ')\n')
 						
 					else:	# GetRes待ち
 						while sem_inf_list:
@@ -787,14 +795,14 @@ if __name__ == '__main__':
 								sys.stdout.write('[Inf]: {}\n'.format(inf['DATA']))
 						
 						if time.time() - start > 20:	# GetRes最大待ち時間: 20s
-							sys.stderr.write('[Error]: Time out. @loop\n')	#このエラーが表示される
+							error_log('[Error]: Time out. @loop\n')	#このエラーが表示される
 							
 							try:	# 一時ログファイルに書き込み
 								f = open(TMP_LOG_FILE, 'a')
 								f.write('{},None\n'.format(round(rcd_time)))
 								f.close()
 							except:
-								sys.stderr.write('[Error]: can not write to file.\n')
+								error_log('[Error]: can not write to file.\n')
 							break
 							
 						time.sleep(0.1)
@@ -818,7 +826,7 @@ if __name__ == '__main__':
 			else:
 				time.sleep(1)
 	else:
-		sys.stderr.write('[Error]: Can not connect with a smart energy meter.\n')
+		error_log('[Error]: Can not connect with a smart energy meter.\n')
 
 	# 終了処理
 
@@ -827,13 +835,13 @@ if __name__ == '__main__':
 		try:
 			sock_udp.sendto(msg, (user_conf.SOCK_UDP, user_conf.SOCK_PORT))
 		except:
-			sys.stderr.write('[Error]: Broken UDP socket.\n')
+			error_log('[Error]: Broken UDP socket.\n')
 
 	if sock:
 		try:
 			sock.close()
 		except:
-			sys.stderr.write('[Error]: Broken socket.\n')
+			error_log('[Error]: Broken socket.\n')
 
 	if LCD_LOG:
 		sys.stdout.write('Wi-SUN  RESET\n')
