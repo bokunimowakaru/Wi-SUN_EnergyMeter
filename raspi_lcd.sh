@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# Apple Pi DEMO
+# Copyright (c) 2017-2019 Wataru KUNINO
 #
-# Copyright (c) 2017 Wataru KUNINO
-#
-# /etc/rc.localへ下記を追加すると自動的に起動する
-#       /home/pi/RaspberryPi/gpio/apple_pi.sh &
+# run_lcd.sh から自動起動されるスクリプトです。
+# README.mdならびにrun_lcd.shを参照ください。
 
+/home/pi/RaspberryPi/gpio/raspi_gpo 24 1
+sleep 6
 /home/pi/RaspberryPi/gpio/raspi_lcd -i -r24 `hostname -I|cut -d" " -f1`
 
 date > raspi_lcd.log
