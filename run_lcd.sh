@@ -28,4 +28,5 @@ while true; do
 			nohup ./raspi_lcd.sh &>> raspi_lcd.log &
 		fi
 	fi
+	CHECK_PREV=${CHECK}
 done
